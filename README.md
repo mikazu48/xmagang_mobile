@@ -1,6 +1,6 @@
-# magangskipsi
+# X Magang - Mobile Apps
 
-A new Flutter project.
+Intern Apps
 
 ## Getting Started
 
