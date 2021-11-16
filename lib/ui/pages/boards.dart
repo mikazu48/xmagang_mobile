@@ -44,7 +44,6 @@ var dio = new Dio();
 CoreFacade cf = new CoreFacade();
 
 Future<List<DocumentData>> fetchData() async {
-  globals.Sessions_UserID = "2";
   final response = await http.get(Uri.parse(
       globals.API_URL + "document_magang/" + globals.Sessions_UserID));
   if (response.statusCode == 200) {
