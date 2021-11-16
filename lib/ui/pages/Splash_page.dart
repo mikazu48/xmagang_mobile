@@ -13,7 +13,7 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     Timer(Duration(seconds: 3), () {
-      Navigator.pushNamed(context, '/SignInPage');
+      Navigator.pushNamed(context, '/MainPage');
     });
     super.initState();
   }

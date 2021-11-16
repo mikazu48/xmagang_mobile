@@ -3,6 +3,7 @@ library magangskripsi.globals;
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
+// Public Version
 String BASE_URL = "https://vrsltz.com/xmagang/";
 String API_URL = "https://vrsltz.com/xmagang/public/api/";
 

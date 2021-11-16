@@ -206,6 +206,7 @@ class MagangBumn extends StatelessWidget {
             TextFormField(
               controller: ctrlFileKHS,
               textAlign: TextAlign.left,
+              enabled: false,
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Harap pilih file KHS',
@@ -251,6 +252,7 @@ class MagangBumn extends StatelessWidget {
             TextFormField(
               controller: ctrlFileOrtu,
               textAlign: TextAlign.left,
+              enabled: false,
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Harap pilih file Izin Ortu',

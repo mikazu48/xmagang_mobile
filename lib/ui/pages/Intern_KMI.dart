@@ -1,8 +1,35 @@
+import 'dart:convert';
+
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:magangskipsi/shared/theme.dart';
 import 'package:magangskipsi/ui/widget/custom_button.dart';
 import 'package:magangskipsi/ui/widget/interest_item.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import '../../globals.dart';
+import '/../../globals.dart' as globals;
+import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
+
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 // import 'package:url_launcher/url_launcher.dart';
+
+var dio = new Dio();
+CoreFacade cf = new CoreFacade();
+
+var ctrlNilaiIPK = TextEditingController();
+var ctrlFileKHS = TextEditingController();
+
+String path_khs = "";
+String path_ortu = "";
+
+FilePickerResult? result;
+PlatformFile? file_khs;
+String fileName = "";
 
 class MagangKMI extends StatelessWidget {
   const MagangKMI({Key? key}) : super(key: key);
@@ -59,6 +86,75 @@ class MagangKMI extends StatelessWidget {
     //   );
     // }
 
+    Future downloadfromUrl(Dio dio, String url, String savePath) async {
+      try {
+        Response response = await dio.get(
+          url,
+          onReceiveProgress: cf.showLoaderDialog(context),
+          //Received data with List<int>
+          options: Options(
+              responseType: ResponseType.bytes,
+              followRedirects: false,
+              validateStatus: (status) {
+                return status! < 500;
+              }),
+        );
+        print(response.headers);
+        if (response.headers.value("content-disposition") == null ||
+            !response.headers
+                .value("content-disposition")
+                .toString()
+                .contains("attachment")) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Download gagal, format API salah ! ")));
+          Navigator.pop(context);
+          return;
+        }
+        File file = File(savePath);
+        var raf = file.openSync(mode: FileMode.write);
+        // response.data is List<int> type
+        raf.writeFromSync(response.data);
+        await raf.close();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Download file sukses! " + file.path.toString())));
+      } catch (e) {
+        print(e);
+      }
+      Navigator.pop(context);
+      OpenFile.open(savePath);
+    }
+
+    void hitPost() async {
+      if (ctrlNilaiIPK.text.isNotEmpty && ctrlFileKHS.text.isNotEmpty) {
+        cf.showLoaderDialog(context);
+        var postUri = Uri.parse(globals.API_URL + "trx_pmk");
+        var request = new http.MultipartRequest("POST", postUri);
+        request.fields['id_mahasiswa'] = globals.Sessions_UserID;
+        request.fields['total_ipk'] = ctrlNilaiIPK.text;
+        request.fields['nama_perusahaan'] = "";
+        request.files.add(await http.MultipartFile.fromPath(
+            'file_khs', file_khs!.path.toString()));
+
+        final streamedResponse = await request.send();
+        var response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          MessageResult resultMessage =
+              MessageResult.fromJson(jsonDecode(response.body));
+          Navigator.pushNamed(context, '/SuccessSubmission');
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(resultMessage.message)));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text("Terjadi kesalahan di API ! " + response.body)));
+          Navigator.pop(context);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Harap isi data & pilih file!!")));
+      }
+    }
+
     //button Upload khs
     Widget uploadFileKHS() {
       return Container(
@@ -73,7 +169,9 @@ class MagangKMI extends StatelessWidget {
             Center(
               child: CustomButton(
                 title: 'Upload File KHS',
-                onPressed: () {},
+                onPressed: () {
+                  pickFiles("KHS");
+                },
                 width: 250,
                 height: 50,
               ),
@@ -83,6 +181,25 @@ class MagangKMI extends StatelessWidget {
       );
     }
 
+    Widget showFileKHS() {
+      return Container(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFormField(
+              controller: ctrlFileKHS,
+              textAlign: TextAlign.left,
+              enabled: false,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: 'Harap pilih file KHS',
+                hintStyle: TextStyle(color: Colors.grey),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     //button upload file Pakta Integritas
     // Widget uploadFileortu() {
     //   return Container(
@@ -252,6 +369,8 @@ class MagangKMI extends StatelessWidget {
                     child: Column(
                       children: [
                         TextFormField(
+                          controller: ctrlNilaiIPK,
+                          keyboardType: TextInputType.number,
                           decoration: InputDecoration(
                             hintText: 'Masukan IPK Anda',
                             border: OutlineInputBorder(
@@ -269,6 +388,7 @@ class MagangKMI extends StatelessWidget {
                         ),
                         // downloadFileortu(),
                         uploadFileKHS(),
+                        showFileKHS(),
                         // uploadFileortu(),
                       ],
                     ),
@@ -288,7 +408,9 @@ class MagangKMI extends StatelessWidget {
                 children: [
                   CustomButton(
                     title: 'Submit',
-                    onPressed: () {},
+                    onPressed: () {
+                      hitPost();
+                    },
                     width: 250,
                   ),
                 ],
@@ -311,5 +433,14 @@ class MagangKMI extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void pickFiles(String? uploadType) async {
+    if (uploadType == "KHS") {
+      result = await FilePicker.platform.pickFiles();
+      if (result == null) return;
+      file_khs = result!.files.first;
+      ctrlFileKHS.text = file_khs!.name;
+    }
   }
 }
