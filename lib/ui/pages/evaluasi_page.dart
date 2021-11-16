@@ -530,7 +530,6 @@ class DropDownWidget extends State {
 
       void hitPost() async {
         try {
-          globals.Sessions_UserID = "2";
           if (checkValidation()) {
             cf.showLoaderDialog(context);
             var postUri = Uri.parse(globals.API_URL + "trx_evaluasi");
